@@ -1,5 +1,8 @@
 # Static Notes
 
+![GitHub Repo Banner](https://ghrb.waren.build/banner?header=Static+Notes%F0%9F%97%92%EF%B8%8F&subheader=Single-file+note+sharing+app+with+URL-encoded+data&bg=14B8A6-06B6D4&color=FFFFFF&headerfont=Inter&subheaderfont=Kinewave&watermarkpos=bottom-right)
+<!-- Created with GitHub Repo Banner by Waren Gonzaga: https://ghrb.waren.build -->
+
 A single-file note sharing app that encodes your notes directly into the URL. No server, no database, no accounts — just share a link.
 
 ## How It Works
