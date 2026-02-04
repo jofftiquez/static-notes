@@ -3,10 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="description" content="Share notes instantly via URL - no signup, no server, no tracking">
+    <meta name="description" content="Create and share notes instantly through URL. No signup, no server, no tracking. Your notes stay private and secure.">
     <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Static Notes - Share Notes Instantly">
+    <meta property="og:description" content="Create and share notes instantly through URL. No signup, no server, no tracking. Your notes stay private and secure.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="">
+    <meta property="og:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630' viewBox='0 0 1200 630'%3E%3Crect fill='%23ffffff' width='1200' height='630'/%3E%3Ctext x='50%25' y='45%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, -apple-system, sans-serif' font-size='72' font-weight='600' fill='%23212121'%3EStatic Notes%3C/text%3E%3Ctext x='50%25' y='60%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, -apple-system, sans-serif' font-size='32' fill='%23757575'%3EShare notes instantly via URL%3C/text%3E%3C/svg%3E">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Static Notes - Share Notes Instantly">
+    <meta name="twitter:description" content="Create and share notes instantly through URL. No signup, no server, no tracking. Your notes stay private and secure.">
+    <meta name="twitter:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630' viewBox='0 0 1200 630'%3E%3Crect fill='%23ffffff' width='1200' height='630'/%3E%3Ctext x='50%25' y='45%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, -apple-system, sans-serif' font-size='72' font-weight='600' fill='%23212121'%3EStatic Notes%3C/text%3E%3Ctext x='50%25' y='60%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui, -apple-system, sans-serif' font-size='32' fill='%23757575'%3EShare notes instantly via URL%3C/text%3E%3C/svg%3E">
+
     <title>Static Notes</title>
     <style>
         /* CSS Reset */
@@ -413,6 +427,23 @@
             font-size: 0.6875rem;
             color: var(--color-text-secondary);
             opacity: 0.6;
+        }
+
+        .credit {
+            font-size: 0.6875rem;
+            color: var(--color-text-secondary);
+            opacity: 0.6;
+        }
+
+        .credit a {
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .credit a:hover {
+            opacity: 1;
+            text-decoration: underline;
         }
 
         .status-group {
@@ -935,6 +966,7 @@
         <div class="status-group">
             <div class="status-item" id="status-message"></div>
         </div>
+        <div class="credit">Made with &lt;3 by <a href="https://github.com/jofftiquez" target="_blank" rel="noopener noreferrer">Joff Tiquez</a></div>
     </footer>
 
     <!-- QR Code Modal -->
@@ -1043,6 +1075,12 @@
             setTimeout(() => {
                 document.body.classList.add('loaded');
             }, 100);
+
+            // Set dynamic og:url on page load
+            const ogUrl = document.querySelector('meta[property="og:url"]');
+            if (ogUrl) {
+                ogUrl.setAttribute('content', window.location.href);
+            }
 
             // Update dynamic meta tags
             function updateMetaTags() {
