@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Share notes instantly via URL - no signup, no server, no tracking">
+    <meta name="theme-color" content="#2196f3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Static Notes</title>
+    <style>
+        /* CSS Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Theme Variables - Light Mode (Default) */
+        :root {
+            --color-bg: #ffffff;
+            --color-surface: #f5f5f5;
+            --color-text: #212121;
+            --color-text-secondary: #757575;
+            --color-border: #e0e0e0;
+            --color-primary: #2196f3;
+            --color-primary-hover: #1976d2;
+            --color-warning: #ff9800;
+            --color-error: #f44336;
+            --color-success: #4caf50;
+            --color-placeholder: #9e9e9e;
+
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            --font-size-sm: 0.875rem;
+            --font-size-base: 1rem;
+            --font-size-lg: 1.125rem;
+            --font-size-xl: 1.5rem;
+
+            --border-radius: 0.375rem;
+            --transition-fast: 0.15s ease;
+            --transition: 0.2s ease;
+            --transition-slow: 0.3s ease;
+        }
+
+        /* Smooth theme transitions - applied after page load to prevent flash */
+        body.loaded * {
+            transition: background-color var(--transition),
+                        color var(--transition),
+                        border-color var(--transition);
+        }
+
+        /* Override for elements that shouldn't transition colors */
+        body.loaded button,
+        body.loaded .modal-backdrop,
+        body.loaded .modal,
+        body.loaded #editor {
+            transition: none;
+        }
+
+        /* Restore button transitions for interactions */
+        body.loaded button {
+            transition: all var(--transition-fast);
+        }
+
+        /* Dark Mode - smooth transition support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #121212;
+                --color-surface: #1e1e1e;
+                --color-text: #e0e0e0;
+                --color-text-secondary: #9e9e9e;
+                --color-border: #333333;
+                --color-primary: #42a5f5;
+                --color-primary-hover: #64b5f6;
+                --color-warning: #ffa726;
+                --color-error: #ef5350;
+                --color-success: #66bb6a;
+                --color-placeholder: #757575;
+            }
+
+            /* Ensure smooth theme changes in dark mode */
+            body, header, footer, main,
+            .toolbar, .editor-container, #editor,
+            .modal, .modal-backdrop {
+                transition: background-color var(--transition),
+                            color var(--transition),
+                            border-color var(--transition);
+            }
+        }
+
+        /* Base Styles */
+        html {
+            font-size: 16px;
+            height: 100%;
+            /* Smooth scrolling for better UX */
+            scroll-behavior: smooth;
+            /* Better text rendering across browsers */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        body {
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            color: var(--color-text);
+            background-color: var(--color-bg);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Better touch scrolling on iOS */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--color-surface);
+            border-bottom: 1px solid var(--color-border);
+            padding: var(--spacing-md) var(--spacing-lg);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: var(--font-size-xl);
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        /* Main Content Area */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: var(--spacing-lg);
+            gap: var(--spacing-md);
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background-color: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-sm) var(--spacing-md);
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background-color: var(--color-border);
+            margin: 0 var(--spacing-xs);
+        }
+
+        /* Editor Container */
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            background-color: var(--color-surface);
+            overflow: hidden;
+        }
+
+        /* Editor */
+        #editor {
+            flex: 1;
+            padding: var(--spacing-lg);
+            outline: none;
+            overflow-y: auto;
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            color: var(--color-text);
+            background-color: var(--color-bg);
+            transition: opacity var(--transition-fast);
+            /* Better scrolling on touch devices */
+            -webkit-overflow-scrolling: touch;
+            /* Prevent unwanted zoom on iOS */
+            touch-action: manipulation;
+        }
+
+        #editor:focus {
+            box-shadow: inset 0 0 0 2px var(--color-primary);
+            border-radius: var(--border-radius);
+        }
+
+        /* Placeholder */
+        #editor:empty::before {
+            content: attr(data-placeholder);
+            color: var(--color-placeholder);
+            pointer-events: none;
+            position: absolute;
+        }
+
+        #editor:focus:empty::before {
+            content: attr(data-placeholder);
+            opacity: 0.7;
+        }
+
+        /* Buttons - Enhanced micro-animations */
+        button {
+            font-family: var(--font-family);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            background-color: var(--color-surface);
+            color: var(--color-text);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            position: relative;
+            /* Better tap target size for mobile */
+            min-height: 44px;
+            /* Prevent text selection on buttons */
+            user-select: none;
+            -webkit-user-select: none;
+            /* Better tap handling on mobile */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        button:hover {
+            background-color: var(--color-border);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+        }
+
+        button.primary {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
+        button.primary:hover {
+            background-color: var(--color-primary-hover);
+            border-color: var(--color-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
+        }
+
+        button.primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
+        .toolbar-btn {
+            min-width: 36px;
+            padding: var(--spacing-sm);
+            font-weight: 600;
+            transition: all var(--transition-fast);
+        }
+
+        .toolbar-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .toolbar-btn:active {
+            transform: scale(0.95);
+        }
+
+        .toolbar-btn.active {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
+        /* Action Buttons */
+        .actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        /* Status Bar (Footer) */
+        footer {
+            background-color: var(--color-surface);
+            border-top: 1px solid var(--color-border);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            flex-shrink: 0;
+        }
+
+        .status-group {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .status-label {
+            font-weight: 500;
+        }
+
+        .status-value {
+            font-variant-numeric: tabular-nums;
+            transition: color var(--transition-fast);
+        }
+
+        .warning {
+            color: var(--color-warning);
+            font-weight: 600;
+        }
+
+        .error {
+            color: var(--color-error);
+            font-weight: 600;
+        }
+
+        /* Status message animations */
+        #status-message {
+            transition: opacity var(--transition-fast), transform var(--transition-fast);
+        }
+
+        #status-message:empty {
+            opacity: 0;
+        }
+
+        #status-message:not(:empty) {
+            opacity: 1;
+            animation: slideInRight var(--transition) ease;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            :root {
+                --spacing-lg: 1rem;
+                --spacing-xl: 1.5rem;
+            }
+
+            header {
+                padding: var(--spacing-md);
+            }
+
+            h1 {
+                font-size: var(--font-size-lg);
+            }
+
+            main {
+                padding: var(--spacing-md);
+            }
+
+            #editor {
+                padding: var(--spacing-md);
+            }
+
+            footer {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: 0.75rem;
+            }
+
+            .status-group {
+                gap: var(--spacing-sm);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .toolbar {
+                padding: var(--spacing-xs) var(--spacing-sm);
+            }
+
+            button {
+                padding: var(--spacing-xs) var(--spacing-sm);
+                font-size: 0.8125rem;
+            }
+
+            .toolbar-btn {
+                min-width: 32px;
+                padding: var(--spacing-xs);
+            }
+
+            footer {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-xs);
+            }
+
+            .status-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        /* Extra small devices (320px minimum) */
+        @media (max-width: 360px) {
+            :root {
+                --font-size-base: 0.9375rem;
+                --spacing-md: 0.75rem;
+                --spacing-lg: 0.875rem;
+            }
+
+            header {
+                padding: var(--spacing-sm) var(--spacing-md);
+            }
+
+            h1 {
+                font-size: 1rem;
+            }
+
+            .subtitle {
+                font-size: 0.75rem;
+            }
+
+            main {
+                padding: var(--spacing-sm);
+                gap: var(--spacing-sm);
+            }
+
+            #editor {
+                padding: var(--spacing-sm);
+                font-size: 0.9375rem;
+            }
+
+            button {
+                font-size: 0.75rem;
+                padding: 0.375rem 0.5rem;
+            }
+
+            .toolbar-btn {
+                min-width: 28px;
+                padding: 0.375rem;
+            }
+
+            footer {
+                font-size: 0.6875rem;
+                padding: 0.375rem var(--spacing-sm);
+            }
+
+            .loading-spinner {
+                padding: var(--spacing-md);
+            }
+
+            .spinner {
+                width: 32px;
+                height: 32px;
+            }
+        }
+
+        /* Ensure no horizontal scroll */
+        body, html {
+            overflow-x: hidden;
+        }
+
+        main {
+            max-width: 100%;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+            animation: fadeIn var(--transition-fast);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-md);
+            background-color: var(--color-bg);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--color-border);
+            border-top-color: var(--color-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            color: var(--color-text);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+
+        /* Loading State for editor */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Accessibility - Enhanced focus states */
+        *:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        /* Better focus for interactive elements */
+        a:focus-visible,
+        button:focus-visible,
+        [role="button"]:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        [contenteditable]:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+        }
+
+        /* Typography in Editor */
+        #editor p {
+            margin-bottom: var(--spacing-md);
+        }
+
+        #editor p:last-child {
+            margin-bottom: 0;
+        }
+
+        #editor b, #editor strong {
+            font-weight: 700;
+        }
+
+        #editor i, #editor em {
+            font-style: italic;
+        }
+
+        /* QR Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+        }
+
+        .modal-backdrop.active {
+            display: flex;
+            animation: fadeIn var(--transition);
+        }
+
+        .modal {
+            background-color: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius);
+            max-width: 90%;
+            max-height: 90%;
+            padding: var(--spacing-xl);
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn var(--transition-slow) ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .modal-title {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            padding: var(--spacing-xs);
+            line-height: 1;
+            transition: all var(--transition-fast);
+            min-width: auto;
+            min-height: auto;
+            border-radius: var(--border-radius);
+        }
+
+        .modal-close:hover {
+            color: var(--color-text);
+            background: var(--color-surface);
+            transform: scale(1.1);
+        }
+
+        .modal-close:active {
+            transform: scale(0.95);
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        #qr-canvas {
+            background-color: white;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            max-width: 100%;
+            height: auto;
+        }
+
+        .qr-warning {
+            color: var(--color-warning);
+            font-size: var(--font-size-sm);
+            text-align: center;
+            max-width: 400px;
+        }
+
+        @media (max-width: 480px) {
+            .modal {
+                padding: var(--spacing-md);
+                max-width: 95%;
+            }
+
+            .modal-title {
+                font-size: var(--font-size-base);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <h1>Static Notes</h1>
+        <div class="subtitle">Share notes instantly via URL - no signup, no server</div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="btn-bold" title="Bold (Ctrl+B)" aria-label="Bold">
+                    <strong>B</strong>
+                </button>
+                <button class="toolbar-btn" id="btn-italic" title="Italic (Ctrl+I)" aria-label="Italic">
+                    <em>I</em>
+                </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-group">
+                <button id="btn-clear" title="Clear note (Ctrl+L)" aria-label="Clear note">
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Editor Container -->
+        <div class="editor-container">
+            <div
+                id="editor"
+                contenteditable="true"
+                spellcheck="true"
+                data-placeholder="Start typing your note here..."
+                role="textbox"
+                aria-label="Note editor"
+                aria-multiline="true"
+            ></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button id="btn-share" class="primary" aria-label="Share note">
+                Share (Copy URL)
+            </button>
+            <button id="btn-qr" aria-label="Generate QR code">
+                QR Code
+            </button>
+        </div>
+    </main>
+
+    <!-- Status Bar (Footer) -->
+    <footer>
+        <div class="status-group">
+            <div class="status-item">
+                <span class="status-label">Characters:</span>
+                <span class="status-value" id="char-count">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">URL Length:</span>
+                <span class="status-value" id="url-length">0</span>
+            </div>
+        </div>
+        <div class="status-group">
+            <div class="status-item" id="status-message"></div>
+        </div>
+    </footer>
+
+    <!-- QR Code Modal -->
+    <div class="modal-backdrop" id="qr-modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">QR Code</h2>
+                <button class="modal-close" id="modal-close-btn" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <canvas id="qr-canvas"></canvas>
+                <div id="qr-warning" class="qr-warning" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner" role="status" aria-live="polite"></div>
+            <div class="loading-text">Decoding note...</div>
+        </div>
+    </div>
+
+    <!-- LZ-String Library (v1.5.0) - Inlined -->
+    <script>
+        var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",n="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$",e={};function t(r,o){if(!e[r]){e[r]={};for(var n=0;n<r.length;n++)e[r][r.charAt(n)]=n}return e[r][o]}var i={compressToBase64:function(r){if(null==r)return"";var n=i._compress(r,6,function(r){return o.charAt(r)});switch(n.length%4){default:case 0:return n;case 1:return n+"===";case 2:return n+"==";case 3:return n+"="}},decompressFromBase64:function(r){return null==r?"":""==r?null:i._decompress(r.length,32,function(n){return t(o,r.charAt(n))})},compressToUTF16:function(o){return null==o?"":i._compress(o,15,function(o){return r(o+32)})+" "},decompressFromUTF16:function(r){return null==r?"":""==r?null:i._decompress(r.length,16384,function(o){return r.charCodeAt(o)-32})},compressToUint8Array:function(r){for(var o=i.compress(r),n=new Uint8Array(2*o.length),e=0,t=o.length;e<t;e++){var s=o.charCodeAt(e);n[2*e]=s>>>8,n[2*e+1]=s%256}return n},decompressFromUint8Array:function(o){if(null==o)return i.decompress(o);for(var n=new Array(o.length/2),e=0,t=n.length;e<t;e++)n[e]=256*o[2*e]+o[2*e+1];var s=[];return n.forEach(function(o){s.push(r(o))}),i.decompress(s.join(""))},compressToEncodedURIComponent:function(r){return null==r?"":i._compress(r,6,function(r){return n.charAt(r)})},decompressFromEncodedURIComponent:function(r){return null==r?"":""==r?null:(r=r.replace(/ /g,"+"),i._decompress(r.length,32,function(o){return t(n,r.charAt(o))}))},compress:function(o){return i._compress(o,16,function(o){return r(o)})},_compress:function(r,o,n){if(null==r)return"";var e,t,i,s={},u={},a="",p="",c="",l=2,f=3,h=2,d=[],m=0,v=0;for(i=0;i<r.length;i+=1)if(a=r.charAt(i),Object.prototype.hasOwnProperty.call(s,a)||(s[a]=f++,u[a]=!0),p=c+a,Object.prototype.hasOwnProperty.call(s,p))c=p;else{if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++),s[p]=f++,c=String(a)}if(""!==c){if(Object.prototype.hasOwnProperty.call(u,c)){if(c.charCodeAt(0)<256){for(e=0;e<h;e++)m<<=1,v==o-1?(v=0,d.push(n(m)),m=0):v++;for(t=c.charCodeAt(0),e=0;e<8;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}else{for(t=1,e=0;e<h;e++)m=m<<1|t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t=0;for(t=c.charCodeAt(0),e=0;e<16;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1}0==--l&&(l=Math.pow(2,h),h++),delete u[c]}else for(t=s[c],e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;0==--l&&(l=Math.pow(2,h),h++)}for(t=2,e=0;e<h;e++)m=m<<1|1&t,v==o-1?(v=0,d.push(n(m)),m=0):v++,t>>=1;for(;;){if(m<<=1,v==o-1){d.push(n(m));break}v++}return d.join("")},decompress:function(r){return null==r?"":""==r?null:i._decompress(r.length,32768,function(o){return r.charCodeAt(o)})},_decompress:function(o,n,e){var t,i,s,u,a,p,c,l=[],f=4,h=4,d=3,m="",v=[],g={val:e(0),position:n,index:1};for(t=0;t<3;t+=1)l[t]=t;for(s=0,a=Math.pow(2,2),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;c=r(s);break;case 2:return""}for(l[3]=c,i=c,v.push(c);;){if(g.index>o)return"";for(s=0,a=Math.pow(2,d),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;switch(c=s){case 0:for(s=0,a=Math.pow(2,8),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 1:for(s=0,a=Math.pow(2,16),p=1;p!=a;)u=g.val&g.position,g.position>>=1,0==g.position&&(g.position=n,g.val=e(g.index++)),s|=(u>0?1:0)*p,p<<=1;l[h++]=r(s),c=h-1,f--;break;case 2:return v.join("")}if(0==f&&(f=Math.pow(2,d),d++),l[c])m=l[c];else{if(c!==h)return null;m=i+i.charAt(0)}v.push(m),l[h++]=i+m.charAt(0),i=m,0==--f&&(f=Math.pow(2,d),d++)}}};return i}();"function"==typeof define&&define.amd?define(function(){return LZString}):"undefined"!=typeof module&&null!=module?module.exports=LZString:"undefined"!=typeof angular&&null!=angular&&angular.module("LZString",[]).factory("LZString",function(){return LZString});
+    </script>
+
+    <!-- QR Code Generator Library - Inlined -->
+    <script>
+        var qrcode=function(){function r(r,t){var e=this;if(e.typeNumber=r,e.errorCorrectLevel=t,e.modules=null,e.moduleCount=0,e.dataCache=null,e.dataList=[],void 0!==r&&void 0!==t)for(var o=0,n=l.length;o<n;o++){var a=l[o];if(a[0]<=e.typeNumber&&e.typeNumber<=a[1]&&a[2]==e.errorCorrectLevel)return e.typeNumber=a[3],void(e.errorCorrectLevel=a[4])}throw"Invalid type number: "+r+" error level: "+t}var t=0,e=1,o=2,n=3,a=4,i=5,u=6,s=7,c=8;r.prototype={addData:function(r){var t=new f(c,r);this.dataList.push(t),this.dataCache=null},isDark:function(r,t){if(r<0||this.moduleCount<=r||t<0||this.moduleCount<=t)throw r+","+t;return this.modules[r][t]},getModuleCount:function(){return this.moduleCount},make:function(){this.makeImpl(!1,this.getBestMaskPattern())},makeImpl:function(t,e){this.moduleCount=4*this.typeNumber+17,this.modules=new Array(this.moduleCount);for(var o=0;o<this.moduleCount;o++){this.modules[o]=new Array(this.moduleCount);for(var n=0;n<this.moduleCount;n++)this.modules[o][n]=null}this.setupPositionProbePattern(0,0),this.setupPositionProbePattern(this.moduleCount-7,0),this.setupPositionProbePattern(0,this.moduleCount-7),this.setupPositionAdjustPattern(),this.setupTimingPattern(),this.setupTypeInfo(t,e),this.typeNumber>=7&&this.setupTypeNumber(t),null==this.dataCache&&(this.dataCache=r.createData(this.typeNumber,this.errorCorrectLevel,this.dataList)),this.mapData(this.dataCache,e)},setupPositionProbePattern:function(r,t){for(var e=-1;e<=7;e++)if(!(r+e<=-1||this.moduleCount<=r+e))for(var o=-1;o<=7;o++)t+o<=-1||this.moduleCount<=t+o||(this.modules[r+e][t+o]=0<=e&&e<=6&&(0==o||6==o)||0<=o&&o<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=o&&o<=4)},getBestMaskPattern:function(){for(var r=0,t=0,e=0;e<8;e++){this.makeImpl(!0,e);var o=d.getLostPoint(this);(0==e||r>o)&&(r=o,t=e)}return t},setupTimingPattern:function(){for(var r=8;r<this.moduleCount-8;r++)null==this.modules[r][6]&&(this.modules[r][6]=r%2==0);for(var t=8;t<this.moduleCount-8;t++)null==this.modules[6][t]&&(this.modules[6][t]=t%2==0)},setupPositionAdjustPattern:function(){for(var r=d.getPatternPosition(this.typeNumber),t=0;t<r.length;t++)for(var e=0;e<r.length;e++){var o=r[t],n=r[e];if(null==this.modules[o][n])for(var a=-2;a<=2;a++)for(var i=-2;i<=2;i++)this.modules[o+a][n+i]=-2==a||2==a||-2==i||2==i||0==a&&0==i}},setupTypeNumber:function(r){for(var t=d.getBCHTypeNumber(this.typeNumber),e=0;e<18;e++){var o=!r&&1==(t>>e&1);this.modules[Math.floor(e/3)][e%3+this.moduleCount-8-3]=o}for(e=0;e<18;e++){o=!r&&1==(t>>e&1);this.modules[e%3+this.moduleCount-8-3][Math.floor(e/3)]=o}},setupTypeInfo:function(r,t){for(var e=this.errorCorrectLevel<<3|t,o=d.getBCHTypeInfo(e),n=0;n<15;n++){var a=!r&&1==(o>>n&1);n<6?this.modules[n][8]=a:n<8?this.modules[n+1][8]=a:this.modules[this.moduleCount-15+n][8]=a}for(n=0;n<15;n++){a=!r&&1==(o>>n&1);n<8?this.modules[8][this.moduleCount-n-1]=a:n<9?this.modules[8][15-n-1+1]=a:this.modules[8][15-n-1]=a}this.modules[this.moduleCount-8][8]=!r},mapData:function(r,t){for(var e=-1,o=this.moduleCount-1,n=7,a=0,i=this.moduleCount-1;i>0;i-=2)for(6==i&&i--;;){for(var u=0;u<2;u++)if(null==this.modules[o][i-u]){var s=!1;a<r.length&&(s=1==(r[a]>>>n&1)),d.getMask(t,o,i-u)&&(s=!s),this.modules[o][i-u]=s,-1==--n&&(a++,n=7)}if((o+=e)<0||this.moduleCount<=o){o-=e,e=-e;break}}}},r.PAD0=236,r.PAD1=17,r.createData=function(t,e,o){for(var n=h.getRSBlocks(t,e),a=new p,i=0;i<o.length;i++){var u=o[i];a.put(u.mode,4),a.put(u.getLength(),d.getLengthInBits(u.mode,t)),u.write(a)}var s=0;for(i=0;i<n.length;i++)s+=n[i].dataCount;if(a.getLengthInBits()>8*s)throw"code length overflow. ("+a.getLengthInBits()+">"+8*s+")";for(a.getLengthInBits()+4<=8*s&&a.put(0,4);a.getLengthInBits()%8!=0;)a.putBit(!1);for(;!(a.getLengthInBits()>=8*s||(a.put(r.PAD0,8),a.getLengthInBits()>=8*s));)a.put(r.PAD1,8);return r.createBytes(a,n)},r.createBytes=function(r,t){for(var e=0,o=0,n=0,a=new Array(t.length),i=new Array(t.length),u=0;u<t.length;u++){var s=t[u].dataCount,c=t[u].totalCount-s;o=Math.max(o,s),n=Math.max(n,c),a[u]=new Array(s);for(var f=0;f<a[u].length;f++)a[u][f]=255&r.buffer[f+e];e+=s;var g=d.getErrorCorrectPolynomial(c),v=new m(a[u],g.getLength()-1).mod(g);i[u]=new Array(g.getLength()-1);for(f=0;f<i[u].length;f++){var l=f+v.getLength()-i[u].length;i[u][f]=l>=0?v.get(l):0}}var h=0;for(f=0;f<t.length;f++)h+=t[f].totalCount;var p=new Array(h),w=0;for(f=0;f<o;f++)for(u=0;u<t.length;u++)f<a[u].length&&(p[w++]=a[u][f]);for(f=0;f<n;f++)for(u=0;u<t.length;u++)f<i[u].length&&(p[w++]=i[u][f]);return p};for(var l=[[1,26,19,1,26,16],[1,26,16,1,26,13],[1,26,13,1,26,9],[1,26,9,2,50,32],[2,50,24,2,50,20],[2,50,20,4,100,65],[4,100,49,4,100,40],[4,100,31,5,134,87],[5,134,67,5,134,54],[5,134,43,7,178,108],[7,178,83,7,178,65],[7,178,52,9,244,130],[9,244,98,9,244,77],[9,244,61,3,310,157],[3,310,122,3,310,96],[3,310,77,3,385,203],[3,385,154,4,385,122],[4,385,98,1,590,254],[1,590,198,2,590,157],[2,590,125,2,800,322],[2,800,253,4,800,202],[4,800,161,4,1056,418],[4,1056,322,6,1056,255],[6,1056,200,8,1296,520],[8,1296,394,8,1296,311],[8,1296,250,10,1440,596],[10,1440,442,11,1440,366],[11,1440,292,5,1984,755],[5,1984,587,7,1984,464],[7,1984,367,10,2592,1033],[10,2592,775,19,2592,611],[19,2592,453,3,3424,1115],[3,3424,871,3,3424,687],[3,3424,542,3,3424,2181],[3,3424,1367,4,3424,1423],[4,3424,908,11,4096,1456],[11,4096,1134,13,4096,904]],f=function(r,t){this.mode=r,this.data=t},d={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:c,PATTERN_POSITION_TABLE:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],G15:1335,G18:7973,G15_MASK:21522,getBCHTypeInfo:function(r){for(var t=r<<10;d.getBCHDigit(t)-d.getBCHDigit(d.G15)>=0;)t^=d.G15<<d.getBCHDigit(t)-d.getBCHDigit(d.G15);return(r<<10|t)^d.G15_MASK},getBCHTypeNumber:function(r){for(var t=r<<12;d.getBCHDigit(t)-d.getBCHDigit(d.G18)>=0;)t^=d.G18<<d.getBCHDigit(t)-d.getBCHDigit(d.G18);return r<<12|t},getBCHDigit:function(r){for(var t=0;0!=r;)t++,r>>>=1;return t},getPatternPosition:function(r){return d.PATTERN_POSITION_TABLE[r-1]},getMask:function(r,t,e){switch(r){case t:return(t+e)%2==0;case e:return t%2==0;case o:return e%3==0;case n:return(t+e)%3==0;case a:return(Math.floor(t/2)+Math.floor(e/3))%2==0;case i:return t*e%2+t*e%3==0;case u:return(t*e%2+t*e%3)%2==0;case s:return(t*e%3+(t+e)%2)%2==0;default:throw"bad maskPattern:"+r}},getErrorCorrectPolynomial:function(r){for(var t=new m([1],0),e=0;e<r;e++)t=t.multiply(new m([1,g.gexp(e)],0));return t},getLengthInBits:function(r,t){if(1<=t&&t<10)switch(r){case d.MODE_NUMBER:return 10;case d.MODE_ALPHA_NUM:return 9;case d.MODE_8BIT_BYTE:case d.MODE_KANJI:return 8;default:throw"mode:"+r}else if(t<27)switch(r){case d.MODE_NUMBER:return 12;case d.MODE_ALPHA_NUM:return 11;case d.MODE_8BIT_BYTE:return 16;case d.MODE_KANJI:return 10;default:throw"mode:"+r}else{if(!(t<41))throw"type:"+t;switch(r){case d.MODE_NUMBER:return 14;case d.MODE_ALPHA_NUM:return 13;case d.MODE_8BIT_BYTE:return 16;case d.MODE_KANJI:return 12;default:throw"mode:"+r}}},getLostPoint:function(r){for(var t=r.getModuleCount(),e=0,o=0;o<t;o++)for(var n=0;n<t;n++){for(var a=0,i=r.isDark(o,n),u=-1;u<=1;u++)if(!(o+u<0||t<=o+u))for(var s=-1;s<=1;s++)n+s<0||t<=n+s||0==u&&0==s||i==r.isDark(o+u,n+s)&&a++;a>5&&(e+=3+a-5)}for(o=0;o<t-1;o++)for(n=0;n<t-1;n++){var c=0;r.isDark(o,n)&&c++,r.isDark(o+1,n)&&c++,r.isDark(o,n+1)&&c++,r.isDark(o+1,n+1)&&c++,0!=c&&4!=c||(e+=3)}for(o=0;o<t;o++)for(n=0;n<t-6;n++)r.isDark(o,n)&&!r.isDark(o,n+1)&&r.isDark(o,n+2)&&r.isDark(o,n+3)&&r.isDark(o,n+4)&&!r.isDark(o,n+5)&&r.isDark(o,n+6)&&(e+=40);for(n=0;n<t;n++)for(o=0;o<t-6;o++)r.isDark(o,n)&&!r.isDark(o+1,n)&&r.isDark(o+2,n)&&r.isDark(o+3,n)&&r.isDark(o+4,n)&&!r.isDark(o+5,n)&&r.isDark(o+6,n)&&(e+=40);var f=0;for(n=0;n<t;n++)for(o=0;o<t;o++)r.isDark(o,n)&&f++;return e+=10*(Math.abs(100*f/t/t-50)/5)}},g={glog:function(r){if(r<1)throw"glog("+r+")";return g.LOG_TABLE[r]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return g.EXP_TABLE[r]},EXP_TABLE:new Array(256),LOG_TABLE:new Array(256)},v=0;v<8;v++)g.EXP_TABLE[v]=1<<v;for(v=8;v<256;v++)g.EXP_TABLE[v]=g.EXP_TABLE[v-4]^g.EXP_TABLE[v-5]^g.EXP_TABLE[v-6]^g.EXP_TABLE[v-8];for(v=0;v<255;v++)g.LOG_TABLE[g.EXP_TABLE[v]]=v;function m(r,t){if(void 0===r.length)throw r.length+"/"+t;var e=function(){for(var e=0;e<r.length&&0==r[e];)e++;for(var o=new Array(r.length-e+t),n=0;n<r.length-e;n++)o[n]=r[n+e];return o}();this.num=e,this.get=function(r){return e[r]},this.getLength=function(){return e.length},this.multiply=function(r){for(var t=new Array(this.getLength()+r.getLength()-1),e=0;e<this.getLength();e++)for(var o=0;o<r.getLength();o++)t[e+o]^=g.gexp(g.glog(this.get(e))+g.glog(r.get(o)));return new m(t,0)},this.mod=function(r){if(this.getLength()-r.getLength()<0)return this;for(var t=g.glog(this.get(0))-g.glog(r.get(0)),e=new Array(this.getLength()),o=0;o<this.getLength();o++)e[o]=this.get(o);for(o=0;o<r.getLength();o++)e[o]^=g.gexp(g.glog(r.get(o))+t);return new m(e,0).mod(r)}}f.prototype={getLength:function(){return this.data.length},write:function(r){for(var t=0;t<this.data.length;t++)r.put(this.data.charCodeAt(t),8)}};var h={getRSBlocks:function(r,t){var e=h.getRsBlockTable(r,t);if(void 0==e)throw"bad rs block @ typeNumber:"+r+"/errorCorrectLevel:"+t;for(var o=e.length/3,n=[],a=0;a<o;a++)for(var i=e[3*a+0],u=e[3*a+1],s=e[3*a+2],c=0;c<i;c++)n.push(new w(u,s));return n},getRsBlockTable:function(r,t){switch(t){case 1:return h.RS_BLOCK_TABLE[4*(r-1)+0];case 0:return h.RS_BLOCK_TABLE[4*(r-1)+1];case 3:return h.RS_BLOCK_TABLE[4*(r-1)+2];case 2:return h.RS_BLOCK_TABLE[4*(r-1)+3];default:return}},RS_BLOCK_TABLE:[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]]};function w(r,t){this.totalCount=r,this.dataCount=t}function p(){this.buffer=[],this.length=0,this.put=function(r,t){for(var e=0;e<t;e++)this.putBit(1==(r>>>t-e-1&1))},this.getLengthInBits=function(){return this.length},this.putBit=function(r){var t=Math.floor(this.length/8);this.buffer.length<=t&&this.buffer.push(0),r&&(this.buffer[t]|=128>>>this.length%8),this.length++}}return r.stringToBytes=function(r){for(var t=[],e=0;e<r.length;e++){var o=r.charCodeAt(e);t.push(255&o)}return t},r.createStringData=function(t,e,o){var n=new r(e,o);return n.addData(t),n},r}();"function"==typeof define&&define.amd?define([],function(){return qrcode}):"object"==typeof exports&&(module.exports=qrcode);
+    </script>
+
+    <!-- Application Script -->
+    <script>
+        // Encode/Decode Functions
+        function encode(text) {
+            if (!text || text.trim() === '') {
+                return '';
+            }
+            return LZString.compressToEncodedURIComponent(text);
+        }
+
+        function decode(hash) {
+            if (!hash || hash.trim() === '') {
+                return '';
+            }
+            try {
+                const decoded = LZString.decompressFromEncodedURIComponent(hash);
+                return decoded || '';
+            } catch (error) {
+                console.error('Failed to decode hash:', error);
+                return '';
+            }
+        }
+
+        // Debounce utility
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', function() {
+            const editor = document.getElementById('editor');
+            const charCount = document.getElementById('char-count');
+            const urlLength = document.getElementById('url-length');
+            const statusMessage = document.getElementById('status-message');
+
+            let isLoadingFromHash = false;
+
+            // Enable smooth theme transitions after initial load to prevent flash
+            setTimeout(() => {
+                document.body.classList.add('loaded');
+            }, 100);
+
+            // Update URL hash with encoded content
+            function updateUrlHash() {
+                if (isLoadingFromHash) {
+                    return;
+                }
+                const content = editor.innerHTML;
+                const encoded = encode(content);
+
+                if (encoded) {
+                    window.history.replaceState(null, '', '#' + encoded);
+                } else {
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+
+                updateStats();
+            }
+
+            // Debounced URL update (500ms)
+            const debouncedUpdateUrlHash = debounce(updateUrlHash, 500);
+
+            // Update character count and URL length
+            function updateStats() {
+                const text = editor.textContent || '';
+                const charCountValue = text.length;
+                charCount.textContent = charCountValue;
+
+                // Apply warning thresholds
+                charCount.classList.remove('warning', 'error');
+                if (charCountValue >= 8000) {
+                    charCount.classList.add('error');
+                } else if (charCountValue >= 2000) {
+                    charCount.classList.add('warning');
+                }
+
+                // Update URL length
+                const currentUrl = window.location.href;
+                const urlLengthValue = currentUrl.length;
+                urlLength.textContent = urlLengthValue;
+
+                // Apply warning thresholds for URL length
+                urlLength.classList.remove('warning', 'error');
+                if (urlLengthValue >= 8000) {
+                    urlLength.classList.add('error');
+                } else if (urlLengthValue >= 2000) {
+                    urlLength.classList.add('warning');
+                }
+            }
+
+            // Load content from URL hash on page load
+            function loadFromHash() {
+                const hash = window.location.hash.substring(1); // Remove the '#'
+                if (hash) {
+                    isLoadingFromHash = true;
+
+                    // Show loading indicator for URLs longer than 500 characters
+                    const loadingOverlay = document.getElementById('loading-overlay');
+                    const shouldShowLoader = hash.length > 500;
+
+                    if (shouldShowLoader) {
+                        loadingOverlay.classList.add('active');
+                    }
+
+                    // Use setTimeout to allow UI to render loading state
+                    setTimeout(() => {
+                        try {
+                            const decoded = decode(hash);
+                            if (decoded) {
+                                editor.innerHTML = decoded;
+                                updateStats();
+                            }
+                        } catch (error) {
+                            console.error('Failed to decode URL:', error);
+                            statusMessage.textContent = 'Failed to load note from URL';
+                            statusMessage.style.color = 'var(--color-error)';
+                        } finally {
+                            if (shouldShowLoader) {
+                                loadingOverlay.classList.remove('active');
+                            }
+                            isLoadingFromHash = false;
+                        }
+                    }, shouldShowLoader ? 50 : 0);
+                }
+            }
+
+            // Handle editor input
+            editor.addEventListener('input', function() {
+                updateStats();
+                debouncedUpdateUrlHash();
+            });
+
+            // Handle placeholder visibility
+            editor.addEventListener('focus', function() {
+                if (editor.innerHTML === '') {
+                    editor.innerHTML = '';
+                }
+            });
+
+            // Format buttons (basic setup for now)
+            document.getElementById('btn-bold').addEventListener('click', function() {
+                document.execCommand('bold', false, null);
+                editor.focus();
+            });
+
+            document.getElementById('btn-italic').addEventListener('click', function() {
+                document.execCommand('italic', false, null);
+                editor.focus();
+            });
+
+            // Clear button
+            document.getElementById('btn-clear').addEventListener('click', function() {
+                if (confirm('Clear all content?')) {
+                    editor.innerHTML = '';
+                    window.history.replaceState(null, '', window.location.pathname);
+                    updateStats();
+                }
+            });
+
+            // Share button - Copy URL to clipboard
+            document.getElementById('btn-share').addEventListener('click', function() {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(function() {
+                    statusMessage.textContent = 'Copied!';
+                    statusMessage.style.color = 'var(--color-success)';
+                    setTimeout(() => {
+                        statusMessage.textContent = '';
+                    }, 2000);
+                }).catch(function(error) {
+                    statusMessage.textContent = 'Failed to copy URL';
+                    statusMessage.style.color = 'var(--color-error)';
+                    setTimeout(() => {
+                        statusMessage.textContent = '';
+                    }, 2000);
+                });
+            });
+
+            // QR Modal elements
+            const qrModalBackdrop = document.getElementById('qr-modal-backdrop');
+            const qrCanvas = document.getElementById('qr-canvas');
+            const qrWarning = document.getElementById('qr-warning');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            // Generate and display QR code
+            function generateQRCode() {
+                const url = window.location.href;
+                const urlLength = url.length;
+
+                // Clear previous warning
+                qrWarning.style.display = 'none';
+                qrWarning.textContent = '';
+
+                try {
+                    // Determine QR code type based on URL length
+                    // Type 10 can handle ~350 chars, Type 20 can handle ~800 chars, Type 40 can handle ~2900 chars
+                    let typeNumber = 10;
+                    if (urlLength > 800) {
+                        typeNumber = 40;
+                        qrWarning.textContent = 'Warning: URL is very long. QR code may be difficult to scan. Consider using a URL shortener.';
+                        qrWarning.style.display = 'block';
+                    } else if (urlLength > 350) {
+                        typeNumber = 20;
+                        qrWarning.textContent = 'Note: URL is moderately long. For easier scanning, consider using a URL shortener.';
+                        qrWarning.style.display = 'block';
+                    }
+
+                    // Create QR code with error correction level L (Low - 7% recovery)
+                    const qr = qrcode(typeNumber, 'L');
+                    qr.addData(url);
+                    qr.make();
+
+                    // Calculate cell size based on module count
+                    const moduleCount = qr.getModuleCount();
+                    const cellSize = Math.max(2, Math.floor(300 / moduleCount));
+                    const size = cellSize * moduleCount;
+
+                    // Set canvas size
+                    qrCanvas.width = size;
+                    qrCanvas.height = size;
+
+                    // Draw QR code on canvas
+                    const ctx = qrCanvas.getContext('2d');
+
+                    // White background
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, size, size);
+
+                    // Black modules
+                    ctx.fillStyle = '#000000';
+                    for (let row = 0; row < moduleCount; row++) {
+                        for (let col = 0; col < moduleCount; col++) {
+                            if (qr.isDark(row, col)) {
+                                ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                            }
+                        }
+                    }
+
+                    // Show modal
+                    qrModalBackdrop.classList.add('active');
+                } catch (error) {
+                    console.error('QR code generation failed:', error);
+                    statusMessage.textContent = 'Failed to generate QR code. URL may be too long.';
+                    statusMessage.style.color = 'var(--color-error)';
+                    setTimeout(() => {
+                        statusMessage.textContent = '';
+                    }, 3000);
+                }
+            }
+
+            // Close modal function
+            function closeQRModal() {
+                qrModalBackdrop.classList.remove('active');
+            }
+
+            // QR button - open modal and generate QR code
+            document.getElementById('btn-qr').addEventListener('click', function() {
+                generateQRCode();
+            });
+
+            // Close modal on close button click
+            modalCloseBtn.addEventListener('click', closeQRModal);
+
+            // Close modal on backdrop click
+            qrModalBackdrop.addEventListener('click', function(e) {
+                if (e.target === qrModalBackdrop) {
+                    closeQRModal();
+                }
+            });
+
+            // Close modal on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && qrModalBackdrop.classList.contains('active')) {
+                    closeQRModal();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+                // Ctrl/Cmd + S - Share (prevent default save)
+                if (modKey && e.key === 's') {
+                    e.preventDefault();
+                    document.getElementById('btn-share').click();
+                }
+
+                // Ctrl/Cmd + L - Clear
+                if (modKey && e.key === 'l') {
+                    e.preventDefault();
+                    document.getElementById('btn-clear').click();
+                }
+
+                // Ctrl/Cmd + B - Bold
+                if (modKey && e.key === 'b') {
+                    e.preventDefault();
+                    document.execCommand('bold', false, null);
+                }
+
+                // Ctrl/Cmd + I - Italic
+                if (modKey && e.key === 'i') {
+                    e.preventDefault();
+                    document.execCommand('italic', false, null);
+                }
+            });
+
+            // Load content from URL hash on page load
+            loadFromHash();
+
+            // Initial stats update
+            updateStats();
+
+            // Test: Log when dark mode is detected
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                console.log('Dark mode detected');
+            }
+
+            // Listen for theme changes
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                    console.log('Theme changed to:', e.matches ? 'dark' : 'light');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
